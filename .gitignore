@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# bluepy 本地编译产物（bluepy-helper 由构建期编译生成）
+bluepy/bluepy/bluepy-helper
+*.o
+*.a
+bluez-src.tgz
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+*.swp
+.DS_Store

@@ -67,10 +67,10 @@ class HomeAssistantPublisher:
             )
 
             self._density_sensor = Sensor(
-                Settings(mqtt=mqtt_settings, entity=density_sensor_info)
+                Settings(mqtt=mqtt_settings, entity=density_sensor_info, manual_availability=True)
             )
             self._count_sensor = Sensor(
-                Settings(mqtt=mqtt_settings, entity=count_sensor_info)
+                Settings(mqtt=mqtt_settings, entity=count_sensor_info, manual_availability=True)
             )
         except Exception as exc:
             raise AirburgMqttError(f"Failed to setup MQTT sensors: {exc}") from exc
@@ -90,8 +90,36 @@ class HomeAssistantPublisher:
         try:
             self._density_sensor.set_state(reading.density)
             self._count_sensor.set_state(reading.count)
+            self._set_availability(True)
         except Exception as exc:
             raise AirburgMqttError(f"Failed to publish reading: {exc}") from exc
+
+    def mark_unavailable(self) -> None:
+        """Mark both sensors offline so Home Assistant shows the device as unavailable.
+
+        Used when the BLE device cannot be reached. Failures here are only logged,
+        not raised, since this is best-effort signalling on an already-failed cycle.
+        """
+        self._set_availability(False, best_effort=True)
+
+    def _set_availability(self, available: bool, *, best_effort: bool = False) -> None:
+        """Set availability on both sensors.
+
+        best_effort=True logs and swallows errors (used for the offline signal on
+        an already-failed cycle); best_effort=False propagates to the caller.
+        """
+        if self._closed:
+            return
+        for sensor in (self._density_sensor, self._count_sensor):
+            if sensor is None:
+                continue
+            try:
+                sensor.set_availability(available)
+            except Exception:
+                if best_effort:
+                    logger.warning("Failed to set sensor availability", exc_info=True)
+                else:
+                    raise
 
     def close(self) -> None:
         """Disconnect from the MQTT broker cleanly."""

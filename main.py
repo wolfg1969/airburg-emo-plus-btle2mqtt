@@ -40,7 +40,9 @@ def _run_once(config: AppConfig) -> bool:
         publisher.publish(reading)
         return True
     except AirburgBleError as exc:
-        logger.error("蓝牙错误: %s", exc)
+        logger.error("BLE 设备不可用: %s", exc)
+        if publisher is not None:
+            publisher.mark_unavailable()
     except AirburgMqttError as exc:
         logger.error("MQTT 错误: %s", exc)
     except Exception:

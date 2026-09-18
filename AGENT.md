@@ -10,7 +10,7 @@ AirburgEmoPlus 传感器读取 PM2.5 浓度与颗粒计数，经校准后通过 
 main.py     入口与轮询循环
 config.py   环境变量配置的解析与校验
 airburg.py  AirburgReading 数据类（btle 与 mqtt 共享的类型契约）
-btle.py     BLE 连接与读数（基于 bluepy）
+btle.py     BLE 连接与读数（基于 bleak）
 mqtt.py     Home Assistant MQTT 发现发布（基于 ha-mqtt-discoverable）
 ```
 
@@ -33,8 +33,9 @@ mqtt.py     Home Assistant MQTT 发现发布（基于 ha-mqtt-discoverable）
 - 作为 btle.py 与 mqtt.py 之间的共享类型契约，避免循环导入。
 
 ### btle.py
-- `AirburgReader` 上下文管理器：`__enter__` 连接设备，`__exit__` 断开，
-  `read()` 触发暖机特性、等待、读取数值特性并解析。
+- `AirburgReader` 上下文管理器：`__enter__` 创建私有 asyncio 事件循环并连接设备，
+  `__exit__` 断开连接并关闭事件循环；`read()` 触发暖机特性、等待、读取数值特性并解析。
+- 内部使用 `bleak.BleakClient` 与 BlueZ 通过 D-Bus 通信。
 - `_parse_value()` 将原始字节按偏移解析为密度与计数，乘以校准系数。
 - `AirburgBleError` 封装所有 BLE 连接/读数失败。
 
@@ -66,16 +67,16 @@ AirburgEmoPlus --BLE--> AirburgReader.read()
 ## 部署
 
 Docker 单容器服务（见 `Dockerfile` / `docker-compose.yml`）：
-- 多阶段构建：builder 阶段编译 vendor 的 bluepy（bluepy-helper），
-  runtime 阶段仅携带运行期依赖（libglib2.0-0、bluez）。
+- 多阶段构建：builder 阶段安装 bleak 及其可选编译依赖（dbus-fast），
+  runtime 阶段仅携带运行期依赖（bluez、dbus、libdbus-1-3）。
 - BLE 经 DBus 与主机 bluetoothd 通信，故 compose 使用 `network_mode: host`
   + `privileged` + 挂载 `/run/dbus/system_bus_socket`。
 - 配置全部由环境变量传入，`docker-compose.yml` 列出常用变量示例。
 
 ## 关键约束
 
-- bluepy 依赖 vendor 的 `./bluepy` 源码，构建期编译 bluepy-helper；
-  运行期镜像不可复制 `bluepy/` 目录，以免遮蔽 site-packages 中已安装的包。
+- bleak 基于 asyncio，通过 D-Bus 与主机 BlueZ 通信；运行期容器需要挂载
+  `/run/dbus/system_bus_socket` 并 privileged 访问蓝牙适配器。
 - `READ_INTERVAL <= 0` 表示单次运行后退出（退出码反映成功与否）；
   `> 0` 表示无限轮询。
 - BLE 暖机约需 20 秒，单次读数周期含此等待；轮询间隔应远大于此。

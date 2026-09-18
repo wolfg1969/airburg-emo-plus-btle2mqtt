@@ -31,7 +31,7 @@
 main.py     入口与轮询循环
 config.py   环境变量配置的解析与校验
 airburg.py  AirburgReading 数据类（共享类型契约）
-btle.py     BLE 连接与读数（基于 bluepy）
+btle.py     BLE 连接与读数（基于 bleak）
 mqtt.py     Home Assistant MQTT 发现发布（基于 ha-mqtt-discoverable）
 ```
 
@@ -39,15 +39,15 @@ mqtt.py     Home Assistant MQTT 发现发布（基于 ha-mqtt-discoverable）
 
 ### 硬件需求
 - Raspberry Pi（内置蓝牙适配器）或支持 BLE 的 Linux 主机 + 蓝牙 4.0+ 适配器。
-- 蓝牙适配器必须运行 **BlueZ**（`bluetoothd`），bluepy 通过 DBus 与其通信。
+- 蓝牙适配器必须运行 **BlueZ**（`bluetoothd`），bleak 通过 DBus 与其通信。
 - 容器部署需要挂载 `/run/dbus/system_bus_socket`，因此 host 网络模式下需 `privileged`。
 
 ### 软件依赖与 Python 包
 - **Python 3.10+**（Docker 镜像使用 Python 3.13.15‑slim）
-- **[bluepy]**（PyPI 包，构建期自动编译 bluepy‑helper）
+- **[bleak]**（PyPI 包，跨平台 BLE 客户端）
 - **[ha‑mqtt‑discoverable]**（Home Assistant MQTT 发现客户端）
 
-[bluepy]: https://github.com/IanHarvey/bluepy
+[bleak]: https://github.com/hbldh/bleak
 
 ## 配置
 
@@ -124,9 +124,9 @@ BLE_DEVICE_ADDR=xx:xx:xx:xx:xx:xx MQTT_BROKER_HOST=... python main.py
 - 容器必须挂载 `/run/dbus/system_bus_socket` 并使用 `privileged`。
 - 主机的蓝牙适配器需运行 `systemctl start bluetooth`。
 
-**Python 包蓝屏（bluepy 编译失败）：**
-- bluepy 依赖 glib‑2.0、libbluetooth‑dev 头文件编译 bluepy‑helper。Docker 镜像已在 `builder` 阶段安装构建依赖。
-- 若本地安装失败，`apt install libglib2.0-dev libbluetooth-dev` 并确保 pkg‑config 配置正确。
+**bleak / dbus-fast 安装失败：**
+- bleak 在 Linux 通过 dbus-fast 与 BlueZ 通信，ARM 平台可能需要 `gcc` 与 `libdbus-1-dev` 编译 dbus-fast。Docker 镜像已在 `builder` 阶段安装构建依赖。
+- 若本地安装失败，`apt install gcc libdbus-1-dev` 并确保 pkg‑config 配置正确。
 
 **读数异常（密度或计数明显偏差）：**
 - 可通过 `CALIB_DENSITY_MULTIPLIER` 与 `CALIB_COUNT_MULTIPLIER` 调整校准系数。

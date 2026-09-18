@@ -4,7 +4,7 @@ services:
     container_name: airburg-emo-plus
     restart: unless-stopped
     # BLE 需要访问主机的蓝牙适配器：使用 host 网络 + privileged。
-    # bluepy 通过 DBus 与主机的 bluetoothd 通信，所以要挂载系统 dbus socket。
+    # bleak 通过 DBus 与主机的 bluetoothd 通信，所以要挂载系统 dbus socket。
     network_mode: host
     privileged: true
     volumes:

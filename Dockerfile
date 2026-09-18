@@ -14,7 +14,6 @@ WORKDIR /app
 # 先拷贝 dependencies 定义，利用 Docker layer 缓存
 COPY requirements.txt ./
 COPY bluepy ./bluepy
-COPY main.py ./
 
 # 安装到系统 Python（不需要 venv，容器本身就是隔离的）
 RUN pip install --no-cache-dir -r requirements.txt
@@ -29,6 +28,8 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
 COPY --from=builder /usr/local/bin /usr/local/bin
-COPY main.py ./
+
+# 只复制应用代码（不复制 bluepy/，避免遮蔽 site-packages 中已安装的 bluepy）
+COPY main.py config.py bt.py mqtt.py ./
 
 CMD ["python", "main.py"]

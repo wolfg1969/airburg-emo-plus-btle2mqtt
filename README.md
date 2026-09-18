@@ -81,7 +81,11 @@ mqtt.py     Home Assistant MQTT 发现发布（基于 ha-mqtt-discoverable）
 ### Docker（推荐）
 
 ```bash
-# 按需修改 docker-compose.yml 中的 BLE_DEVICE_ADDR、MQTT_BROKER_HOST 等
+# 从模板创建 .env 并填入自己的设置
+cp .env.example .env
+# 编辑 .env（至少修改 BLE_DEVICE_ADDR 和 MQTT_BROKER_HOST）
+nano .env
+
 docker compose up -d --build
 ```
 
@@ -99,6 +103,13 @@ docker compose logs -f
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
+
+# 方法一：使用 .env 文件（推荐）
+cp .env.example .env && nano .env
+export $(grep -v '^#' .env | xargs)  # 将 .env 载入环境
+python main.py
+
+# 方法二：在命令行中指定环境变量
 BLE_DEVICE_ADDR=xx:xx:xx:xx:xx:xx MQTT_BROKER_HOST=... python main.py
 ```
 
@@ -107,7 +118,7 @@ BLE_DEVICE_ADDR=xx:xx:xx:xx:xx:xx MQTT_BROKER_HOST=... python main.py
 **Home Assistant 侧传感器显示为不可用，即使设备在线：**
 - BLE 连接失败时会发布 `offline` 状态。成功读数后会立即置 `online`。
 - 如果传感器持续不可用，检查日志是否出现 `BLE 设备不可用` 错误。
-- 确保 `docker‑compose.yml` 中的 `BLE_DEVICE_ADDR` 与你的设备 MAC 一致。
+- 确保 `.env` 文件中的 `BLE_DEVICE_ADDR` 与你的设备 MAC 一致。
 
 **Docker 启动报错 `dbus` / `bluetoothd` 连接失败：**
 - 容器必须挂载 `/run/dbus/system_bus_socket` 并使用 `privileged`。

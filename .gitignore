@@ -17,3 +17,6 @@ bluez-src.tgz
 .vscode/
 *.swp
 .DS_Store
+
+# 本地环境文件
+.env

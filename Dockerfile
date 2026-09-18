@@ -13,7 +13,6 @@ WORKDIR /app
 
 # 先拷贝 dependencies 定义，利用 Docker layer 缓存
 COPY requirements.txt ./
-COPY bluepy ./bluepy
 
 # 安装到系统 Python（不需要 venv，容器本身就是隔离的）
 RUN pip install --no-cache-dir -r requirements.txt

@@ -44,7 +44,7 @@ mqtt.py     Home Assistant MQTT 发现发布（基于 ha-mqtt-discoverable）
 
 ### 软件依赖与 Python 包
 - **Python 3.10+**（Docker 镜像使用 Python 3.13.15‑slim）
-- **[bluepy]**（使用仓库内 vendor 的 `./bluepy` 源码，构建期编译 bluepy‑helper）
+- **[bluepy]**（PyPI 包，构建期自动编译 bluepy‑helper）
 - **[ha‑mqtt‑discoverable]**（Home Assistant MQTT 发现客户端）
 
 [bluepy]: https://github.com/IanHarvey/bluepy
@@ -102,11 +102,6 @@ pip install -r requirements.txt
 BLE_DEVICE_ADDR=xx:xx:xx:xx:xx:xx MQTT_BROKER_HOST=... python main.py
 ```
 
-## 树内 vendor 说明
-
-`bluepy/` 为树内 vendor 的 bluepy 源码，构建期会编译 bluepy‑helper。
-该目录**不应**复制进运行期镜像（见 `Dockerfile` `COPY` 语句），避免遮蔽 site‑packages 中已安装的 bluepy。
-
 ## 常见问题
 
 **Home Assistant 侧传感器显示为不可用，即使设备在线：**
@@ -117,6 +112,10 @@ BLE_DEVICE_ADDR=xx:xx:xx:xx:xx:xx MQTT_BROKER_HOST=... python main.py
 **Docker 启动报错 `dbus` / `bluetoothd` 连接失败：**
 - 容器必须挂载 `/run/dbus/system_bus_socket` 并使用 `privileged`。
 - 主机的蓝牙适配器需运行 `systemctl start bluetooth`。
+
+**Python 包蓝屏（bluepy 编译失败）：**
+- bluepy 依赖 glib‑2.0、libbluetooth‑dev 头文件编译 bluepy‑helper。Docker 镜像已在 `builder` 阶段安装构建依赖。
+- 若本地安装失败，`apt install libglib2.0-dev libbluetooth-dev` 并确保 pkg‑config 配置正确。
 
 **读数异常（密度或计数明显偏差）：**
 - 可通过 `CALIB_DENSITY_MULTIPLIER` 与 `CALIB_COUNT_MULTIPLIER` 调整校准系数。

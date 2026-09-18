@@ -3,27 +3,20 @@
 import logging
 import struct
 import time
-from dataclasses import dataclass
 from typing import Optional
 
-from bluepy import btle
+from bluepy import btle as bluepy_btle
+
+from airburg import AirburgReading
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class AirburgReading:
-    """Parsed PM2.5 density and particle count reading."""
-
-    density: int
-    count: int
 
 
 class AirburgBleError(Exception):
     """Raised when BLE connection, discovery or reading fails."""
 
 
-class _NoopDelegate(btle.DefaultDelegate):
+class _NoopDelegate(bluepy_btle.DefaultDelegate):
     """Default delegate that ignores notifications."""
 
 
@@ -47,14 +40,14 @@ class AirburgReader:
         self._warmup_sleep = warmup_sleep
         self._density_multiplier = density_multiplier
         self._count_multiplier = count_multiplier
-        self._peripheral: Optional[btle.Peripheral] = None
+        self._peripheral: Optional[bluepy_btle.Peripheral] = None
 
     def __enter__(self) -> "AirburgReader":
         logger.info("Connecting to BLE device %s", self._device_addr)
         try:
-            self._peripheral = btle.Peripheral().withDelegate(_NoopDelegate())
+            self._peripheral = bluepy_btle.Peripheral().withDelegate(_NoopDelegate())
             self._peripheral.connect(self._device_addr)
-        except btle.BTLEException as exc:
+        except bluepy_btle.BTLEException as exc:
             raise AirburgBleError(
                 f"Failed to connect to {self._device_addr}: {exc}"
             ) from exc
@@ -69,7 +62,7 @@ class AirburgReader:
             try:
                 peripheral.disconnect()
                 logger.info("已断开 BLE 设备 %s", device_addr)
-            except btle.BTLEException:
+            except bluepy_btle.BTLEException:
                 logger.warning("Failed to disconnect cleanly", exc_info=True)
         return False
 
@@ -108,7 +101,7 @@ class AirburgReader:
                 reading.count,
             )
             return reading
-        except btle.BTLEException as exc:
+        except bluepy_btle.BTLEException as exc:
             raise AirburgBleError(
                 f"Failed to read from {self._device_addr}: {exc}"
             ) from exc

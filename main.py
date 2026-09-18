@@ -14,7 +14,7 @@ import sys
 import time
 
 from config import AppConfig, load_config
-from bt import AirburgReader, AirburgBleError
+from btle import AirburgReader, AirburgBleError
 from mqtt import HomeAssistantPublisher, AirburgMqttError
 
 logger = logging.getLogger("airburg")

@@ -8,7 +8,7 @@ from ha_mqtt_discoverable import Settings, DeviceInfo
 from ha_mqtt_discoverable.sensors import Sensor, SensorInfo
 
 from config import AppConfig
-from bt import AirburgReading
+from airburg import AirburgReading
 
 logger = logging.getLogger(__name__)
 

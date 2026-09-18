@@ -58,14 +58,17 @@ class AirburgReader:
             raise AirburgBleError(
                 f"Failed to connect to {self._device_addr}: {exc}"
             ) from exc
+        logger.info("已连接到 BLE 设备 %s", self._device_addr)
         return self
 
     def __exit__(self, exc_type, exc, tb) -> bool:
         peripheral = self._peripheral
         self._peripheral = None
         if peripheral is not None:
+            device_addr = getattr(peripheral, "addr", "unknown")
             try:
                 peripheral.disconnect()
+                logger.info("已断开 BLE 设备 %s", device_addr)
             except btle.BTLEException:
                 logger.warning("Failed to disconnect cleanly", exc_info=True)
         return False
@@ -94,11 +97,17 @@ class AirburgReader:
                     f"Value characteristic {self._value_char_uuid} not found"
                 )
             value = value_chars[0].read()
-            return _parse_value(
+            reading = _parse_value(
                 value,
                 self._density_multiplier,
                 self._count_multiplier,
             )
+            logger.info(
+                "读到数值：density=%d, count=%d",
+                reading.density,
+                reading.count,
+            )
+            return reading
         except btle.BTLEException as exc:
             raise AirburgBleError(
                 f"Failed to read from {self._device_addr}: {exc}"

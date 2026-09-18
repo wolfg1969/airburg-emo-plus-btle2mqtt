@@ -11,26 +11,17 @@ for the complete list.
 
 import logging
 import sys
+import time
 
-from config import load_config
+from config import AppConfig, load_config
 from bt import AirburgReader, AirburgBleError
 from mqtt import HomeAssistantPublisher, AirburgMqttError
 
+logger = logging.getLogger("airburg")
 
-def main() -> int:
-    try:
-        config = load_config()
-    except ValueError as exc:
-        logging.basicConfig(level=logging.INFO)
-        logging.error("配置错误: %s", exc)
-        return 2
 
-    logging.basicConfig(
-        level=getattr(logging, config.log_level.upper(), logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
-    logger = logging.getLogger("airburg")
-
+def _run_once(config: AppConfig) -> bool:
+    """Perform one read-publish cycle. Returns True on success."""
     publisher: HomeAssistantPublisher | None = None
     try:
         publisher = HomeAssistantPublisher(config)
@@ -47,20 +38,40 @@ def main() -> int:
 
         logger.info('{"density": %d, "count": %d}', reading.density, reading.count)
         publisher.publish(reading)
+        return True
     except AirburgBleError as exc:
         logger.error("蓝牙错误: %s", exc)
-        return 1
     except AirburgMqttError as exc:
         logger.error("MQTT 错误: %s", exc)
-        return 1
     except Exception:
         logger.exception("未预期的错误")
-        return 1
     finally:
         if publisher is not None:
             publisher.close()
+    return False
 
-    return 0
+
+def main() -> int:
+    try:
+        config = load_config()
+    except ValueError as exc:
+        logging.basicConfig(level=logging.INFO)
+        logging.error("配置错误: %s", exc)
+        return 2
+
+    logging.basicConfig(
+        level=getattr(logging, config.log_level.upper(), logging.INFO),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+
+    if config.read_interval <= 0:
+        return 0 if _run_once(config) else 1
+
+    logger.info("启动轮询，间隔 %.1f 秒", config.read_interval)
+    while True:
+        _run_once(config)
+        logger.info("等待 %.1f 秒后再次读取...", config.read_interval)
+        time.sleep(config.read_interval)
 
 
 if __name__ == "__main__":

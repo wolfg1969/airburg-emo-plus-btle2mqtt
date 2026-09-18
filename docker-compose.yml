@@ -9,16 +9,24 @@ services:
     privileged: true
     volumes:
       - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket
+    # 添加日志轮转配置，限制日志大小保留1天左右的日志量
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"   # 每个日志文件最大10MB
+        max-file: "3"     # 保留最多3个文件（加上当前文件共4个，约40MB）
     # 用环境变量覆盖配置；更多可选变量见 config.py
     environment:
       - BLE_DEVICE_ADDR=20:16:09:10:00:96
       - MQTT_BROKER_HOST=192.168.1.125
       - MQTT_BROKER_PORT=1883
       - LOG_LEVEL=DEBUG
+      - READ_INTERVAL=300
       # 可选：MQTT_USERNAME=
       # 可选：MQTT_PASSWORD=
       # 可选：MQTT_USE_TLS=false
       # 可选：BLE_WARMUP_SLEEP=20
       # 可选：CALIB_DENSITY_MULTIPLIER=1.265
       # 可选：CALIB_COUNT_MULTIPLIER=2.56
+      # 可选：READ_INTERVAL=0
       # 可选：LOG_LEVEL=INFO

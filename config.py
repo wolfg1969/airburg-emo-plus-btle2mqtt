@@ -35,6 +35,7 @@ class AppConfig:
     sensor_density_name: str
     sensor_count_name: str
 
+    read_interval: float
     log_level: str
 
 
@@ -169,6 +170,9 @@ def load_config(environ: Optional[Mapping[str, str]] = None) -> AppConfig:
         ),
         sensor_count_name=_parse_nonempty(
             env.get("SENSOR_COUNT_NAME", "PM2.5 Count"), "SENSOR_COUNT_NAME"
+        ),
+        read_interval=_parse_float(
+            env.get("READ_INTERVAL", "0"), "READ_INTERVAL", min_value=0
         ),
         log_level=_parse_log_level(env.get("LOG_LEVEL", "INFO")),
     )

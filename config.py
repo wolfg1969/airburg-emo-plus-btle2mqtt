@@ -19,6 +19,9 @@ class AppConfig:
     ble_warmup_char_uuid: str
     ble_value_char_uuid: str
     ble_warmup_sleep: float
+    ble_connect_timeout: float
+    ble_connect_retries: int
+    ble_cycle_retries: int
     calib_density_multiplier: float
     calib_count_multiplier: float
 
@@ -129,6 +132,21 @@ def load_config(environ: Optional[Mapping[str, str]] = None) -> AppConfig:
             env.get("BLE_WARMUP_SLEEP", "20"),
             "BLE_WARMUP_SLEEP",
             min_value=0,
+        ),
+        ble_connect_timeout=_parse_float(
+            env.get("BLE_CONNECT_TIMEOUT", "10"),
+            "BLE_CONNECT_TIMEOUT",
+            must_be_positive=True,
+        ),
+        ble_connect_retries=_parse_int(
+            env.get("BLE_CONNECT_RETRIES", "3"),
+            "BLE_CONNECT_RETRIES",
+            min_value=1,
+        ),
+        ble_cycle_retries=_parse_int(
+            env.get("BLE_CYCLE_RETRIES", "2"),
+            "BLE_CYCLE_RETRIES",
+            min_value=1,
         ),
         calib_density_multiplier=_parse_float(
             env.get("CALIB_DENSITY_MULTIPLIER", "1.265"),

@@ -23,33 +23,55 @@ logger = logging.getLogger("airburg")
 def _run_once(config: AppConfig) -> bool:
     """Perform one read-publish cycle. Returns True on success."""
     publisher: HomeAssistantPublisher | None = None
-    try:
-        publisher = HomeAssistantPublisher(config)
-        with AirburgReader(
-            device_addr=config.ble_device_addr,
-            service_uuid=config.ble_service_uuid,
-            warmup_char_uuid=config.ble_warmup_char_uuid,
-            value_char_uuid=config.ble_value_char_uuid,
-            warmup_sleep=config.ble_warmup_sleep,
-            density_multiplier=config.calib_density_multiplier,
-            count_multiplier=config.calib_count_multiplier,
-        ) as reader:
-            reading = reader.read()
 
-        logger.info('{"density": %d, "count": %d}', reading.density, reading.count)
-        publisher.publish(reading)
-        return True
-    except AirburgBleError as exc:
-        logger.error("BLE 设备不可用: %s", exc)
-        if publisher is not None:
-            publisher.mark_unavailable()
-    except AirburgMqttError as exc:
-        logger.error("MQTT 错误: %s", exc)
-    except Exception:
-        logger.exception("未预期的错误")
-    finally:
-        if publisher is not None:
-            publisher.close()
+    for attempt in range(1, config.ble_cycle_retries + 1):
+        try:
+            publisher = HomeAssistantPublisher(config)
+            with AirburgReader(
+                device_addr=config.ble_device_addr,
+                service_uuid=config.ble_service_uuid,
+                warmup_char_uuid=config.ble_warmup_char_uuid,
+                value_char_uuid=config.ble_value_char_uuid,
+                warmup_sleep=config.ble_warmup_sleep,
+                density_multiplier=config.calib_density_multiplier,
+                count_multiplier=config.calib_count_multiplier,
+                connect_timeout=config.ble_connect_timeout,
+                connect_retries=config.ble_connect_retries,
+            ) as reader:
+                reading = reader.read()
+
+            logger.info(
+                '{"density": %d, "count": %d}', reading.density, reading.count
+            )
+            publisher.publish(reading)
+            return True
+        except AirburgBleError as exc:
+            if attempt == config.ble_cycle_retries:
+                logger.error("BLE 设备不可用: %s", exc)
+                if publisher is not None:
+                    publisher.mark_unavailable()
+                break
+            logger.warning(
+                "读取周期尝试 %d/%d 失败: %s，1 秒后重试",
+                attempt,
+                config.ble_cycle_retries,
+                exc,
+            )
+            if publisher is not None:
+                publisher.close()
+                publisher = None
+            time.sleep(1)
+        except AirburgMqttError as exc:
+            logger.error("MQTT 错误: %s", exc)
+            break
+        except Exception:
+            logger.exception("未预期的错误")
+            break
+        finally:
+            if publisher is not None:
+                publisher.close()
+                publisher = None
+
     return False
 
 
